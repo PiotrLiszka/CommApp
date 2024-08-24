@@ -1,10 +1,10 @@
 # CommApp-Cpp
 
 ## Introduction
-Yet another text exchange application written in c++ for linux(so far).
+Yet another cross-platform text exchange application written in c++20.
 
 TODO
-// used dependencies etc...
+<!-- used dependencies etc... -->
 
 ## License
 
@@ -19,30 +19,27 @@ TODO
 
 ### Building CommApp-Cpp from Scratch
 
-TODO
-General things
+Various build systems are supported due to usage of cmake.
 
 #### Linux
 
-TODO
+##### Run cmake and build with make:
 
-Run cmake and build with make:
+<!-- No submodules yet -->
+<!-- $ git submodule init && git submodule update -->
 
 ```
-  $ git submodule init && git submodule update
   $ mkdir build && cd build
-  $ cmake ..
+  $ cmake .. -G "Unix Makefiles"
   $ make -j
 ```
 
-You can also specify the build type:
+##### Run cmake and build with Ninja:
 
 ```
-  $ cmake -DCMAKE_BUILD_TYPE=Debug ..
-```
-  or
-```
-  $ cmake -DCMAKE_BUILD_TYPE=Release ..
+  $ mkdir build && cd build
+  $ cmake .. -G Ninja
+  $ ninja
 ```
 
 #### Windows
