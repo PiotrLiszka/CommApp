@@ -1,0 +1,6 @@
+[submodule "commapp-cpp/externals/amqpcpp"]
+	path = commapp-cpp/externals/amqpcpp
+	url = https://github.com/akalend/amqpcpp.git
+[submodule "commapp-cpp/externals/AMQP-CPP"]
+	path = commapp-cpp/externals/AMQP-CPP
+	url = https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git
