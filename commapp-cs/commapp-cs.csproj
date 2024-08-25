@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+
+  <ItemGroup>
+    <Compile Remove="CommunicationsLib\**" />
+    <EmbeddedResource Remove="CommunicationsLib\**" />
+    <None Remove="CommunicationsLib\**" />
+    <Page Remove="CommunicationsLib\**" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="CommunicationsLib\CommunicationsLib.csproj" />
+  </ItemGroup>
+
+
+  <PropertyGroup>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>commappcs</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+</Project>
