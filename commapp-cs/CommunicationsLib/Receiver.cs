@@ -6,18 +6,28 @@ namespace CommunicationsLib;
 
 public class Receiver
 {
-    public Receiver()
+
+    public static Queue<string?> messageQueue = new();
+    private readonly ConnectionFactory factory;
+    private readonly IConnection connection;
+    private readonly IModel channel;
+    public Receiver(bool localHost = true)
     {
+        if (localHost)
+        {
+            factory = new ConnectionFactory { HostName = "localhost" };
+            connection = factory.CreateConnection();
+            channel = connection.CreateModel();
+        }
+        else
+        {
+            //  TODO: ip port username i password z pliku 
+        }
+
     }
- 
-    public static string GetMessage()
+
+    public void GetMessages()
     {
-        string messReceived = "";
-
-        var factory = new ConnectionFactory { HostName = "localhost" };
-        using var connection = factory.CreateConnection();
-        using var channel = connection.CreateModel();
-
         channel.QueueDeclare(queue: "hello",
                              durable: false,
                              exclusive: false,
@@ -32,7 +42,7 @@ public class Receiver
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
             Console.WriteLine($" [x] Received {message}");
-            messReceived = message;
+            messageQueue.Enqueue(message);
         };
 
         channel.BasicConsume(queue: "hello",
@@ -41,7 +51,6 @@ public class Receiver
 
         Console.WriteLine(" Press [enter] to exit.");
         Console.ReadLine();
-        return messReceived;
     }
 
 }

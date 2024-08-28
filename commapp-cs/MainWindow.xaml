@@ -17,8 +17,14 @@
             <RowDefinition Height="50" MaxHeight="50" />
         </Grid.RowDefinitions>
         <Label x:Name="MainLabel" Content="Marsengerr" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Center" FontSize="50" Grid.ColumnSpan="2"/>
-        <TextBox x:Name="RecMessBox" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Text="yessir"  Margin="10,10,10,10" Background="LightGray" IsReadOnly="True" TextChanged="RecMessBox_TextChanged" TextBlock.FontSize="20"/>
-        <TextBox x:Name="SendMessBox" Grid.Row="2" Grid.Column="0" Text="BOOBS" TextBlock.FontSize="18" />
-        <Button x:Name="SendMessButton" Content="Send" Margin="5,5,5,5" Grid.Column="1" Grid.Row="2" Click="SendMessButton_Click" ClickMode="Press" />
+        
+        <TextBox x:Name="RecMessBox" Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="1" Margin="10,10,10,10"
+                 Text="yessir" Background="LightGray" IsReadOnly="True" 
+                 VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" FontSize="18" />
+        
+        <TextBox x:Name="SendMessBox" Grid.Row="2" Grid.Column="0" Margin="10,5,5,5"
+                 Text="Type message..." TextBlock.FontSize="16" TextWrapping="Wrap"
+                 GotKeyboardFocus="SendMessBox_GotKeyboardFocus" KeyDown="SendMessBox_KeyDown" LostKeyboardFocus="SendMessBox_LostKeyboardFocus" />
+        <Button x:Name="SendMessButton" Content="Send" Margin="5,5,10,5" Grid.Column="1" Grid.Row="2" Click="SendMessButton_Click" ClickMode="Press" />
     </Grid>
 </Window>
