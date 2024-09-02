@@ -26,13 +26,16 @@ namespace commappcs
         private Sender messageSender;
         private Receiver messageReceiver;
         public Queue<string?> messageQueue = Receiver.messageQueue;
-        
+
+        private const string templateString = "Type message...";
+
+
         public MainWindow()
         {
             InitializeComponent();
 
-            messageReceiver = new(true);
-            messageSender = new(true);
+            messageReceiver = new(false);
+            messageSender = new(false);
 
             messageReceiver.GetMessages();
 
@@ -40,6 +43,12 @@ namespace commappcs
 
             Console.WriteLine(" Press [enter] to exit.");
 
+        }
+
+        private Task<MessageInfo?> JsonDeserializeMessage(string? jsonMessage)
+        {
+            MessageInfo? messageInfo = System.Text.Json.JsonSerializer.Deserialize<MessageInfo>(jsonMessage);
+            return Task.FromResult(messageInfo);
         }
 
         private async void UpdateMessagesInWindow()
@@ -52,15 +61,28 @@ namespace commappcs
                 {
                     if (uiAccess)
                     {
-                        RecMessBox.AppendText("\n" + "Otrzymano: " + messageQueue.Dequeue());
+                        if (messageQueue.TryDequeue(out string? message))
+                        {
+                            MessageInfo? messageInfo = await JsonDeserializeMessage(message);
+                            //RecMessBox.AppendText("\n" + "Otrzymano: " + messageQueue.Dequeue());
+                            RecMessBox.AppendText($"\n{messageInfo.TimeSend.ToShortTimeString()}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
+                        }
                     }
                     else
                     {
-                        RecMessBox.Dispatcher.Invoke(() => { RecMessBox.AppendText("\n" + "Otrzymano: " + messageQueue.Dequeue()); });
+                        if (messageQueue.TryDequeue(out string? message))
+                        {
+                            MessageInfo? messageInfo = await JsonDeserializeMessage(message);
+                            //RecMessBox.Dispatcher.Invoke(() => { RecMessBox.AppendText("\n" + "Otrzymano: " + messageQueue.Dequeue()); });
+                            RecMessBox.Dispatcher.Invoke(() =>
+                            {
+                                RecMessBox.AppendText($"\n{messageInfo.TimeSend.ToShortTimeString()}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
+                            });
+                        }
                     }
                 }
 
-                await Task.Delay(250);
+                await Task.Delay(200);
             }
         }
 
@@ -70,8 +92,8 @@ namespace commappcs
 
             if (textToSend.Length > 0)
             {
-                messageSender.SendMessage(textToSend);
                 RecMessBox.AppendText("\n" + "Wysłano: " + textToSend);
+                messageSender.SendMessage(textToSend);
                 SendMessBox.Clear();
             }
             else
@@ -82,7 +104,7 @@ namespace commappcs
 
         private void SendMessButton_Click(object sender, RoutedEventArgs e)
         {
-            if (SendMessBox.Text.Length > 0)
+            if (SendMessBox.Text.Length > 0 && SendMessBox.Text is not templateString)
             {
                 ParseMessageToSender();
             }
@@ -95,7 +117,7 @@ namespace commappcs
 
         private void SendMessBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
-            if (SendMessBox.Text.Trim().Length > 0 && SendMessBox.Text == "Type message...")
+            if (SendMessBox.Text.Trim().Length > 0 && SendMessBox.Text is templateString)
             {
                 SendMessBox.Clear();
                 SendMessBox.Foreground = Brushes.Black;
@@ -115,7 +137,7 @@ namespace commappcs
             if (SendMessBox.Text.Trim().Length == 0)
             {
                 SendMessBox.Foreground = Brushes.Gray;
-                SendMessBox.Text = "Type message...";
+                SendMessBox.Text = templateString;
             }
         }
     }
