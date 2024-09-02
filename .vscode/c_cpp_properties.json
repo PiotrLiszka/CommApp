@@ -5,7 +5,8 @@
             "includePath": [
                 "${default}",
                 "${workspaceFolder}/commapp-cpp/externals/AMQP-CPP/include",
-                "${workspaceFolder}/commapp-cpp"
+                "${workspaceFolder}/commapp-cpp",
+                "${workspaceFolder}/commapp-cpp/src"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

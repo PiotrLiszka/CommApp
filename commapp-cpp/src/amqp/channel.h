@@ -23,13 +23,16 @@ public:
     ~channel();
 
     void consume(consumer_callback callback);
+    void declare_consumers();
     void publish(const std::string& message);
+    bool opend() const;
 
 private:
     const connection_details _connection_details;
     AMQP::LibBoostAsioHandler _handler;
     AMQP::TcpConnection _connection;
     AMQP::TcpChannel _channel;
+    std::queue<consumer_callback> _callbacks;
 };
 
 } // namespace amqp

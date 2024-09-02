@@ -1,5 +1,5 @@
-#include <src/amqp/channel.h>
-#include <src/service.h>
+#include <amqp/channel.h>
+#include <service/service.h>
 
 int main()
 {
@@ -12,31 +12,32 @@ int main()
       .routing_key = "my-key"};
 
     boost::asio::io_service io_service(2);
-    service service(io_service, details);
+    service::basic_service service(io_service, details);
 
-    service.consume(
-      [](const std::string& message) { LOG_INFO(message.c_str()); });
+    service.consume([](const std::string& message)
+                    { LOG_INFO(message.c_str()); });
 
-    std::thread t1([&io_service, &service]() {
-        std::string s;
-        while(!service.stopped() && std::getline(std::cin, s))
-            {
-                if(s == "stop")
-                    {
-                        boost::asio::post(io_service,
-                                          [&service, s]() { service.stop(); });
-                        return;
-                    }
-                else
-                    {
-                        boost::asio::post(io_service, [&service, s]() {
-                            service.publish(s);
-                        });
-                    }
-            }
-    });
+    std::thread t1(
+      [&io_service, &service]()
+      {
+          std::string s;
+          while(!io_service.stopped() && std::getline(std::cin, s))
+          {
+              if(s == "stop")
+              {
+                  boost::asio::post(io_service,
+                                    [&io_service, s]() { io_service.stop(); });
+                  return;
+              }
+              else
+              {
+                  boost::asio::post(io_service,
+                                    [&service, s]() { service.publish(s); });
+              }
+          }
+      });
 
-    service.run();
+    service::run(service, io_service);
     t1.join();
 
     return 0;

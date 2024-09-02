@@ -31,8 +31,8 @@ set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(SOURCE_FILES
     ${SOURCE_DIR}/logger.h
     ${SOURCE_DIR}/logger.cpp
-    ${SOURCE_DIR}/service.h
-    ${SOURCE_DIR}/service.cpp
+    ${SOURCE_DIR}/service/service.h
+    ${SOURCE_DIR}/service/service.cpp
     ${SOURCE_DIR}/amqp/channel.h
     ${SOURCE_DIR}/amqp/channel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
