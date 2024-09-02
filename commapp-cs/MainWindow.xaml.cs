@@ -8,10 +8,13 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-
 using CommunicationsLib;
+
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace commappcs
 {
@@ -20,60 +23,100 @@ namespace commappcs
     /// </summary>
     public partial class MainWindow : Window
     {
-        string mymess = string.Empty;
-       
-
-        private static void CreateConnectionRabbit(out IConnection connection, out IModel model)
-        {
-            var factory = new ConnectionFactory { HostName = "localhost" };
-            connection = factory.CreateConnection();
-            model = connection.CreateModel();
-        }
+        private Sender messageSender;
+        private Receiver messageReceiver;
+        public Queue<string?> messageQueue = Receiver.messageQueue;
+        
         public MainWindow()
         {
             InitializeComponent();
 
-            CreateConnectionRabbit(out IConnection connection, out IModel channel);
+            messageReceiver = new(true);
+            messageSender = new(true);
 
+            messageReceiver.GetMessages();
 
-            channel.QueueDeclare(queue: "hello",
-                             durable: false,
-                             exclusive: false,
-                             autoDelete: false,
-                             arguments: null);
-
-            var consumer = new EventingBasicConsumer(channel);
-            consumer.Received += (model, ea) =>
-            {
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
-                Console.WriteLine($" [x] Received {message}");
-                RecMessBox.Text = message.ToString();
-            };
-
-            channel.BasicConsume(queue: "hello",
-                             autoAck: true,
-                             consumer: consumer);
+            UpdateMessagesInWindow();
 
             Console.WriteLine(" Press [enter] to exit.");
 
-
         }
 
-        private void RecMessBox_TextChanged(object sender, TextChangedEventArgs e)
+        private async void UpdateMessagesInWindow()
         {
-            
+            while (true)
+            {
+                bool uiAccess = RecMessBox.Dispatcher.CheckAccess();
+
+                if (messageQueue.Count > 0)
+                {
+                    if (uiAccess)
+                    {
+                        RecMessBox.AppendText("\n" + "Otrzymano: " + messageQueue.Dequeue());
+                    }
+                    else
+                    {
+                        RecMessBox.Dispatcher.Invoke(() => { RecMessBox.AppendText("\n" + "Otrzymano: " + messageQueue.Dequeue()); });
+                    }
+                }
+
+                await Task.Delay(250);
+            }
+        }
+
+        private void ParseMessageToSender()
+        {
+            string textToSend = SendMessBox.Text.Trim();
+
+            if (textToSend.Length > 0)
+            {
+                messageSender.SendMessage(textToSend);
+                RecMessBox.AppendText("\n" + "Wysłano: " + textToSend);
+                SendMessBox.Clear();
+            }
+            else
+            {
+                SendMessBox.Clear();
+            }
         }
 
         private void SendMessButton_Click(object sender, RoutedEventArgs e)
         {
-            RecMessBox.Clear();
+            if (SendMessBox.Text.Length > 0)
+            {
+                ParseMessageToSender();
+            }
 
-            Sender.SendMessage(SendMessBox.Text.ToString());
+            if (SendMessButton.IsKeyboardFocused)
+            {
+                while (!SendMessBox.Focus()) ;
+            }
+        }
 
-            //mymess = Receiver.GetMessage();
+        private void SendMessBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (SendMessBox.Text.Trim().Length > 0 && SendMessBox.Text == "Type message...")
+            {
+                SendMessBox.Clear();
+                SendMessBox.Foreground = Brushes.Black;
+            }
+;       }
 
-            //RecMessBox.Text = mymess;
+        private void SendMessBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ParseMessageToSender();
+            }
+        }
+
+        private void SendMessBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (SendMessBox.Text.Trim().Length == 0)
+            {
+                SendMessBox.Foreground = Brushes.Gray;
+                SendMessBox.Text = "Type message...";
+            }
         }
     }
 }
