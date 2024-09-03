@@ -2,6 +2,12 @@
 
 #include "amqp/channel.h"
 
+#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/system/error_code.hpp>
+
 namespace service
 {
 class basic_service;
@@ -11,13 +17,12 @@ template <typename Service,
             std::is_base_of_v<
               basic_service, Service> || std::is_same_v<basic_service, Service>,
             Service>::type>
-[[nodiscard]] inline uint64_t
-run(Service& service, boost::asio::io_service& io_service)
+[[nodiscard]] inline uint64_t run(Service& service, boost::asio::io_service& io_service)
 {
     try
     {
-        boost::asio::signal_set signals(io_service, SIGINT, SIGTERM);
-        signals.async_wait(
+        boost::asio::signal_set io_signals(io_service, SIGINT, SIGTERM);
+        io_signals.async_wait(
           [&io_service](const boost::system::error_code& error_code,
                         int /*signal_number*/)
           {
