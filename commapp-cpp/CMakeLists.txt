@@ -41,20 +41,20 @@ set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(SOURCE_FILES
     ${SOURCE_DIR}/logger.h
     ${SOURCE_DIR}/logger.cpp
-    ${SOURCE_DIR}/service/service.h
-    ${SOURCE_DIR}/service/service.cpp
-    ${SOURCE_DIR}/amqp/channel.h
-    ${SOURCE_DIR}/amqp/channel.cpp
+    # ${SOURCE_DIR}/service/service.h
+    # ${SOURCE_DIR}/service/service.cpp
+    ${SOURCE_DIR}/service/qservice.h
+    ${SOURCE_DIR}/service/qservice.cpp
+    ${SOURCE_DIR}/service/context.h
+    ${SOURCE_DIR}/amqp/dispatcher.h
+    ${SOURCE_DIR}/amqp/dispatcher.cpp
     ${SOURCE_DIR}/app/mainwindow.h
     ${SOURCE_DIR}/app/mainwindow.cpp
     ${SOURCE_DIR}/app/mainwindow.ui
     ${SOURCE_DIR}/app/main.cpp
 )
 
-qt_add_executable(CommApp-Cpp ${SOURCE_FILES}
-    src/app/mainwindow.h src/app/mainwindow.cpp src/app/mainwindow.ui
-
-)
+qt_add_executable(CommApp-Cpp ${SOURCE_FILES})
 
 target_link_libraries(CommApp-Cpp PUBLIC Qt6::Widgets amqpcpp ${Boost_LIBRARIES} pthread dl ssl)
 

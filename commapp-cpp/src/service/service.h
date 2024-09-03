@@ -1,6 +1,6 @@
 #pragma once
 
-#include "amqp/channel.h"
+#include "amqp/dispatcher.h"
 
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/io_service.hpp>
@@ -17,7 +17,8 @@ template <typename Service,
             std::is_base_of_v<
               basic_service, Service> || std::is_same_v<basic_service, Service>,
             Service>::type>
-[[nodiscard]] inline uint64_t run(Service& service, boost::asio::io_service& io_service)
+[[nodiscard]] inline uint64_t
+run(Service& service, boost::asio::io_service& io_service)
 {
     try
     {
@@ -52,12 +53,10 @@ public:
     basic_service(boost::asio::io_service& io_service,
                   const amqp::connection_details& connection_details);
 
-    void init();
-
     void consume(amqp::consumer_callback callback);
     void publish(const std::string& message);
 
 private:
-    amqp::channel _channel;
+    amqp::dispatcher _dispatcher;
 };
 } // namespace service

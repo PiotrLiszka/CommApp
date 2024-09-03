@@ -1,12 +1,17 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-MainWindow::MainWindow(QWidget* parent, service::basic_service& basic_service)
+#include <service/context.h>
+
+MainWindow::MainWindow(QWidget* parent)
 : QMainWindow(parent),
-  ui(new Ui::MainWindow),
-  service(basic_service)
+  ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    context::getInstance().dispatcher().consume([this](const std::string& message){
+        ui->textBrowser->append(QString{message.data()} + "\n");
+    });
 }
 
 MainWindow::~MainWindow()
@@ -16,7 +21,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
-    service.publish(ui->textEdit->toPlainText().toStdString());
+    context::getInstance().dispatcher().publish(ui->textEdit->toPlainText().toStdString());
     ui->textEdit->setPlainText("");
-
 }

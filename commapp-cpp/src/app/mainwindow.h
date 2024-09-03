@@ -14,7 +14,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget* parent, service::basic_service& basic_service);
+    explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
 private slots:
@@ -22,7 +22,6 @@ private slots:
 
 private:
     Ui::MainWindow* ui;
-    service::basic_service& service;
 };
 
 #endif // MAINWINDOW_H
