@@ -18,6 +18,12 @@ public class Sender
             factory = new ConnectionFactory { HostName = "localhost" };
             connection = factory.CreateConnection();
             channel = connection.CreateModel();
+
+            channel.QueueDeclare(queue: "hello",
+                     durable: false,
+                     exclusive: false,
+                     autoDelete: false,
+             arguments: null);
         }
         else
         {
@@ -37,28 +43,26 @@ public class Sender
                 connection = factory.CreateConnection();
                 channel = connection.CreateModel();
 
+                channel.QueueDeclare(queue: "hello",
+                     durable: false,
+                     exclusive: false,
+                     autoDelete: false,
+             arguments: null);
+
             }
         }
     }
 
-    private Task<string> JsonSerializeMessage(string messageToSerialize, int userID = 1)
+    private string JsonSerializeMessage(string messageToSerialize, int userID = 1)
     {
         MessageInfo messageInfo = new MessageInfo(userID, messageToSerialize);
 
-        string? jsonMessage = JsonSerializer.Serialize(messageInfo);
-   
-        return Task.FromResult(jsonMessage);
+        return JsonSerializer.Serialize(messageInfo);
     }
 
-    public async Task SendMessage(string messageToSend)
+    public void SendMessage(string messageToSend)
     {
-        channel.QueueDeclare(queue: "hello",
-                             durable: false,
-                             exclusive: false,
-                             autoDelete: false,
-                     arguments: null);
-
-        string jsonMessage = await JsonSerializeMessage(messageToSend);
+        string jsonMessage = JsonSerializeMessage(messageToSend);
 
         var body = Encoding.UTF8.GetBytes(jsonMessage);
 
@@ -67,18 +71,12 @@ public class Sender
         properties.ContentEncoding = "application/json";
         properties.ContentType = "application/json";
 
-       channel.BasicPublish(exchange: string.Empty,
+        channel.BasicPublish(exchange: string.Empty,
                              routingKey: "hello",
                              basicProperties: properties,
                              body: body);
 
-        Debug.WriteLine($"Message send.\nMess: {messageToSend}");
-        //Console.WriteLine($" [x] Sent {messageToSend}");
-
-        //Console.WriteLine(" Press [enter] to exit.");
-
-        return;
+        Debug.WriteLine($"Message send.{Environment.NewLine}Mess: {messageToSend}");
     }
-
 
 }

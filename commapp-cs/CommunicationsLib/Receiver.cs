@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -18,6 +19,13 @@ public class Receiver
             factory = new ConnectionFactory { HostName = "localhost" };
             connection = factory.CreateConnection();
             channel = connection.CreateModel();
+
+            channel.QueueDeclare(queue: "hello",
+                             durable: false,
+                             exclusive: false,
+                             autoDelete: false,
+                             arguments: null);
+
         }
         else
         {
@@ -34,27 +42,24 @@ public class Receiver
                 factory.Password = sr.ReadLine();
                 connection = factory.CreateConnection();
                 channel = connection.CreateModel();
-            }
-        }
 
-    }
-
-    public void GetMessages()
-    {
-        channel.QueueDeclare(queue: "hello",
+                channel.QueueDeclare(queue: "hello",
                              durable: false,
                              exclusive: false,
                              autoDelete: false,
                              arguments: null);
+            }
+        }
+    }
 
-        //Console.WriteLine(" [*] Waiting for messages.");
-
+    public void GetMessages()
+    {
         var consumer = new EventingBasicConsumer(channel);
         consumer.Received += (model, ea) =>
         {
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
-            //Console.WriteLine($" [x] Received {message}");
+            
             messageQueue.Enqueue(message);
         };
 
@@ -62,8 +67,11 @@ public class Receiver
                              autoAck: true,
                              consumer: consumer);
 
-        //Console.WriteLine(" Press [enter] to exit.");
-        //Console.ReadLine();
     }
 
+    ~Receiver()
+    {
+        channel.Close();
+        connection.Close();
+    }
 }

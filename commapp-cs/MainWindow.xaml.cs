@@ -13,8 +13,7 @@ using CommunicationsLib;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-using System.Threading;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace commappcs
 {
@@ -25,30 +24,52 @@ namespace commappcs
     {
         private Sender messageSender;
         private Receiver messageReceiver;
-        public Queue<string?> messageQueue = Receiver.messageQueue;
+        private FlowDocument messagesFlowDocument;
+
+        private readonly string imgPth = String.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), System.IO.Path.DirectorySeparatorChar, "img.jpg");
+        private readonly string imgPthRec = String.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), System.IO.Path.DirectorySeparatorChar, "imgRec.jpg");
 
         private const string templateString = "Type message...";
 
+        public Queue<string?> messageQueue = Receiver.messageQueue;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            messagesFlowDocument = new FlowDocument();
+
+            RecMessBox.Document = messagesFlowDocument;
+
+            //paragraphSent = new Paragraph();
+            //paragraphReceived = new Paragraph();
+
 
             messageReceiver = new(false);
             messageSender = new(false);
 
             messageReceiver.GetMessages();
 
-            UpdateMessagesInWindow();
+            //messageSender.SendMessage(messageSender.ImageToStringConv(imgPth));
+            //ConvertStringToImage(MessageConverter.ImageToStringConverter(imgPth));
 
-            Console.WriteLine(" Press [enter] to exit.");
+            UpdateMessagesInWindow();
 
         }
 
-        private Task<MessageInfo?> JsonDeserializeMessage(string? jsonMessage)
+        private MessageInfo? JsonDeserializeMessage(string? jsonMessage)
         {
-            MessageInfo? messageInfo = System.Text.Json.JsonSerializer.Deserialize<MessageInfo>(jsonMessage);
-            return Task.FromResult(messageInfo);
+            return System.Text.Json.JsonSerializer.Deserialize<MessageInfo>(jsonMessage);
+        }
+
+        private void ConvertStringToImage(string imgString)
+        {
+            byte[] bytes = Convert.FromBase64String(imgString);
+            using (var imgFile = new System.IO.FileStream(imgPthRec, System.IO.FileMode.OpenOrCreate))
+            {
+                imgFile.WriteAsync(bytes, 0, bytes.Length);
+                imgFile.Flush();
+            }
         }
 
         private async void UpdateMessagesInWindow()
@@ -59,24 +80,30 @@ namespace commappcs
 
                 if (messageQueue.Count > 0)
                 {
+                    Paragraph paragraphReceived = new Paragraph();
+
+                    //paragraphReceived.Background = Brushes.LightBlue;
+                    paragraphReceived.TextAlignment = TextAlignment.Left;
+
                     if (uiAccess)
                     {
                         if (messageQueue.TryDequeue(out string? message))
                         {
-                            MessageInfo? messageInfo = await JsonDeserializeMessage(message);
-                            //RecMessBox.AppendText("\n" + "Otrzymano: " + messageQueue.Dequeue());
-                            RecMessBox.AppendText($"\n{messageInfo.TimeSend.ToShortTimeString()}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
+                            MessageInfo? messageInfo = JsonDeserializeMessage(message);
+                            //RecMessBox.AppendText($"{Environment.NewLine}{messageInfo.TimeSend.ToShortTimeString()}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
+
+                            paragraphReceived.Inlines.Add(string.Concat(messageInfo.TimeSend.ToShortTimeString(), " ID: ", messageInfo.SenderID, " -> " , messageInfo.MessageBody));
+                            messagesFlowDocument.Blocks.Add(paragraphReceived);
                         }
                     }
                     else
                     {
                         if (messageQueue.TryDequeue(out string? message))
                         {
-                            MessageInfo? messageInfo = await JsonDeserializeMessage(message);
-                            //RecMessBox.Dispatcher.Invoke(() => { RecMessBox.AppendText("\n" + "Otrzymano: " + messageQueue.Dequeue()); });
+                            MessageInfo? messageInfo = JsonDeserializeMessage(message);
                             RecMessBox.Dispatcher.Invoke(() =>
                             {
-                                RecMessBox.AppendText($"\n{messageInfo.TimeSend.ToShortTimeString()}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
+                                RecMessBox.AppendText($"{Environment.NewLine}{messageInfo.TimeSend.ToShortTimeString()}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
                             });
                         }
                     }
@@ -90,9 +117,20 @@ namespace commappcs
         {
             string textToSend = SendMessBox.Text.Trim();
 
+            Paragraph paragraphSent = new Paragraph();
+
             if (textToSend.Length > 0)
             {
-                RecMessBox.AppendText("\n" + "Wysłano: " + textToSend);
+                //paragraphSent.Background = Brushes.OrangeRed;
+
+                paragraphSent.TextAlignment = TextAlignment.Right;
+                //paragraphSent.BorderBrush = Brushes.Orange;
+                //paragraphSent.BorderThickness = new Thickness(5);
+                paragraphSent.Inlines.Add(string.Concat("Wysłano: ", textToSend));
+
+                messagesFlowDocument.Blocks.Add(paragraphSent);
+                //RecMessBox.AppendText(string.Concat(Environment.NewLine,"Wysłano: ", textToSend));
+
                 messageSender.SendMessage(textToSend);
                 SendMessBox.Clear();
             }
@@ -115,6 +153,15 @@ namespace commappcs
             }
         }
 
+        private void SendMessBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                ParseMessageToSender();
+            }
+
+        }
+
         private void SendMessBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
             if (SendMessBox.Text.Trim().Length > 0 && SendMessBox.Text is templateString)
@@ -124,20 +171,20 @@ namespace commappcs
             }
 ;       }
 
-        private void SendMessBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                ParseMessageToSender();
-            }
-        }
-
         private void SendMessBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
             if (SendMessBox.Text.Trim().Length == 0)
             {
                 SendMessBox.Foreground = Brushes.Gray;
                 SendMessBox.Text = templateString;
+            }
+        }
+
+        private void RecMessBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!RecMessBox.IsMouseOver)
+            {
+                RecMessBox.ScrollToEnd();
             }
         }
     }
