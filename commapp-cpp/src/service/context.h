@@ -6,8 +6,11 @@
 class context
 {
 public:
+    static bool is_initialized;
+
     static service::qservice& getInstance()
     {
+        assert(context::is_initialized);
         return getInstanceImpl()._service;
     }
 
@@ -20,7 +23,9 @@ private:
     explicit context(const amqp::connection_details* connection_details)
     : _connection_details(std::move([connection_details](){ assert(connection_details); return *connection_details; }()))
       , _service(nullptr, _connection_details)
-    {}
+    {
+        context::is_initialized = true;
+    }
 
     static context& getInstanceImpl(const amqp::connection_details* connection_details = nullptr)
     {
@@ -31,6 +36,6 @@ private:
     context(context const&) = delete;
     void operator=(context const&) = delete;
 
-    amqp::connection_details _connection_details;
+    const amqp::connection_details _connection_details;
     service::qservice _service;
 };

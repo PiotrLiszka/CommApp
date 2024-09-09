@@ -46,7 +46,7 @@ dispatcher::dispatcher(boost::asio::io_service& io_service,
               {
                   callback(std::string(message.body(), message.bodySize()));
               }
-              LOG_WARNING("%d", _consumer_channel.ack(deliveryTag));
+              _consumer_channel.ack(deliveryTag);
           };
 
           _consumer_channel.consume(_connection_details.queue_name)
@@ -74,20 +74,12 @@ dispatcher::dispatcher(boost::asio::io_service& io_service,
                   LOG_ERROR("Publisher: AMQP exchange declare failure!", msg);
               });
 
-          _publisher_channel.declareQueue(_connection_details.queue_name)
-            .onSuccess([]() { LOG_OK("Publisher: AMQP queue declared"); })
-            .onError(
-              [](const char* msg)
-              { LOG_ERROR("Publisher: AMQP queue declare failure!", msg); });
+          // _publisher_channel.declareQueue(_connection_details.queue_name)
+          //   .onSuccess([]() { LOG_OK("Publisher: AMQP queue declared"); })
+          //   .onError(
+          //     [](const char* msg)
+          //     { LOG_ERROR("Publisher: AMQP queue declare failure!", msg); });
 
-          _publisher_channel
-            .bindQueue(_connection_details.exchange_name,
-                       _connection_details.queue_name,
-                       _connection_details.routing_key)
-            .onSuccess([]() { LOG_OK("Publisher: AMQP queue bound!"); })
-            .onError(
-              [](const char* msg)
-              { LOG_ERROR("Publisher: AMQP queue bind failure!", msg); });
       });
     _publisher_channel.onError(
       [](const char* msg)
@@ -104,14 +96,16 @@ dispatcher::~dispatcher()
 
 void dispatcher::consume(consumer_callback callback)
 {
+
     _consumer_callbacks.push_back(std::move(callback));
 }
 
-void dispatcher::publish(const std::string& message)
+void dispatcher::publish(const std::string& message, const std::string& routing_key)
 {
     _publisher_channel.startTransaction();
     _publisher_channel.publish(_connection_details.exchange_name,
-                               _connection_details.routing_key,
+                               //_connection_details.routing_key,
+                               routing_key,
                                message);
     _publisher_channel.commitTransaction().onError(
       [](const char* msg)

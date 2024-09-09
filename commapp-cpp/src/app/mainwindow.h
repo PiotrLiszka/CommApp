@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <service/service.h>
+#include <QListWidgetItem>
 
 namespace Ui
 {
@@ -17,8 +17,12 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
+    void init();
+
 private slots:
     void on_pushButton_clicked();
+    void on_addNewFriendPushButton_clicked();
+    void on_friendsListWidget_itemDoubleClicked(QListWidgetItem *item);
 
 private:
     Ui::MainWindow* ui;
