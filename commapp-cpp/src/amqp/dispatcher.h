@@ -23,9 +23,8 @@ public:
     ~dispatcher();
 
     void consume(consumer_callback callback);
-    void publish(const std::string& message);
+    void publish(const std::string& message, const std::string& routing_key);
     bool opened() const;
-    void close();
 
 private:
     const connection_details _connection_details;

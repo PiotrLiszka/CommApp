@@ -4,7 +4,6 @@
 #include <QObject>
 
 #include <amqp/dispatcher.h>
-// #include <service/service.h>
 
 #include "main.moc"
 

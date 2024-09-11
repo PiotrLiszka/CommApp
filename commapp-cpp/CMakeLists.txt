@@ -37,30 +37,44 @@ qt_standard_project_setup()
 # cmake -DCMAKE_PREFIX_PATH=/home/marcin/Qt/6.7.2/gcc_64 .. -G Ninja
 # ==========================================
 
+
+# ---------------------
+#        RapidJSON
+# ---------------------
+set(RAPIDJSON_DIR ${EXTERNALS_DIR}/rapidjson/include)
+file(GLOB_RECURSE rapidjson_sources
+     ${RAPIDJSON_DIR}/rapidjson/*.h
+)
+# ==========================================
+
 set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(SOURCE_FILES
     ${SOURCE_DIR}/logger.h
     ${SOURCE_DIR}/logger.cpp
-    # ${SOURCE_DIR}/service/service.h
-    # ${SOURCE_DIR}/service/service.cpp
     ${SOURCE_DIR}/service/qservice.h
     ${SOURCE_DIR}/service/qservice.cpp
     ${SOURCE_DIR}/service/context.h
+    ${SOURCE_DIR}/service/context.cpp
     ${SOURCE_DIR}/amqp/dispatcher.h
     ${SOURCE_DIR}/amqp/dispatcher.cpp
     ${SOURCE_DIR}/app/mainwindow.h
     ${SOURCE_DIR}/app/mainwindow.cpp
     ${SOURCE_DIR}/app/mainwindow.ui
     ${SOURCE_DIR}/app/main.cpp
+    ${SOURCE_DIR}/app/login/login_dialog.h
+    ${SOURCE_DIR}/app/login/login_dialog.cpp
+    ${SOURCE_DIR}/app/login/login_dialog.ui
 )
 
-qt_add_executable(CommApp-Cpp ${SOURCE_FILES})
+qt_add_executable(CommApp-Cpp ${SOURCE_FILES} ${rapidjson_sources})
 
 target_link_libraries(CommApp-Cpp PUBLIC Qt6::Widgets amqpcpp ${Boost_LIBRARIES} pthread dl ssl)
 
 target_include_directories(CommApp-Cpp PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${SOURCE_DIR}
+    ${SOURCE_DIR}/app
+    ${RAPIDJSON_DIR}
 )
 
 target_precompile_headers(CommApp-Cpp PUBLIC ${SOURCE_DIR}/stdafx.h)
