@@ -8,12 +8,10 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using CommunicationsLib;
-
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 using System.Diagnostics;
+using CommunicationsLib.MsgServices;
+using CommunicationsLib.MsgParser;
 
 namespace commappcs
 {
@@ -26,8 +24,10 @@ namespace commappcs
         private Receiver messageReceiver;
         private FlowDocument messagesFlowDocument;
 
-        private readonly string imgPth = String.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), System.IO.Path.DirectorySeparatorChar, "img.jpg");
-        private readonly string imgPthRec = String.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), System.IO.Path.DirectorySeparatorChar, "imgRec.jpg");
+        private string? imagePath = null;
+
+        //private readonly string imgPth = String.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), System.IO.Path.DirectorySeparatorChar, "img.jpg");
+        //private readonly string imgPthRec = String.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), System.IO.Path.DirectorySeparatorChar, "imgRec.jpg");
 
         private const string templateString = "Type message...";
 
@@ -41,87 +41,77 @@ namespace commappcs
 
             RecMessBox.Document = messagesFlowDocument;
 
-            //paragraphSent = new Paragraph();
-            //paragraphReceived = new Paragraph();
+            messageReceiver = new(true);
+            messageSender = new(true);
 
 
-            messageReceiver = new(false);
-            messageSender = new(false);
-
-            messageReceiver.GetMessages();
+            messageReceiver.StartMessageConsumer();
 
             //messageSender.SendMessage(messageSender.ImageToStringConv(imgPth));
             //ConvertStringToImage(MessageConverter.ImageToStringConverter(imgPth));
+
+            //messageSender.SendMessage(ImageConverter.ImageToStringConverter(imgPth));
+            //ImageConverter.StringToImageConverter(ImageConverter.ImageToStringConverter(imgPth));
 
             UpdateMessagesInWindow();
 
         }
 
-        private MessageInfo? JsonDeserializeMessage(string? jsonMessage)
-        {
-            return System.Text.Json.JsonSerializer.Deserialize<MessageInfo>(jsonMessage);
-        }
-
-        private void ConvertStringToImage(string imgString)
-        {
-            byte[] bytes = Convert.FromBase64String(imgString);
-            using (var imgFile = new System.IO.FileStream(imgPthRec, System.IO.FileMode.OpenOrCreate))
-            {
-                imgFile.WriteAsync(bytes, 0, bytes.Length);
-                imgFile.Flush();
-            }
-        }
+        //private void StringToImageConverter(string imgString)
+        //{
+        //    byte[] bytes = Convert.FromBase64String(imgString);
+        //    using (var imgFile = new System.IO.FileStream(imgPthRec, System.IO.FileMode.OpenOrCreate))
+        //    {
+        //        imgFile.WriteAsync(bytes, 0, bytes.Length);
+        //        imgFile.Flush();
+        //    }
+        //}
 
         private async void UpdateMessagesInWindow()
         {
             while (true)
             {
-                bool uiAccess = RecMessBox.Dispatcher.CheckAccess();
 
                 if (messageQueue.Count > 0)
                 {
                     Paragraph paragraphReceived = new Paragraph();
 
-                    //paragraphReceived.Background = Brushes.LightBlue;
                     paragraphReceived.TextAlignment = TextAlignment.Left;
 
-                    if (uiAccess)
+                    if (messageQueue.TryDequeue(out string? message))
                     {
-                        if (messageQueue.TryDequeue(out string? message))
-                        {
-                            MessageInfo? messageInfo = JsonDeserializeMessage(message);
-                            //RecMessBox.AppendText($"{Environment.NewLine}{messageInfo.TimeSend.ToShortTimeString()}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
+                        MessageInfo? messageInfo = MessageJson.JsonDeserializeMessage(message);
 
-                            paragraphReceived.Inlines.Add(string.Concat(messageInfo.TimeSend.ToShortTimeString(), " ID: ", messageInfo.SenderID, " -> " , messageInfo.MessageBody));
+                        // if message did not pass the json schema validation, it will not be shown at all for now
+                        // TODO: write some error message about it
+                        if (messageInfo == null)
+                            continue;
+
+                        bool uiAccess = RecMessBox.Dispatcher.CheckAccess();
+
+                        if (uiAccess)
+                        {
+                            paragraphReceived.Inlines.Add(string.Concat(messageInfo.TimeSentDT.ToString("HH:mm"), " ID: ", messageInfo.SenderID, " -> ", messageInfo.MessageBody));
                             messagesFlowDocument.Blocks.Add(paragraphReceived);
                         }
-                    }
-                    else
-                    {
-                        if (messageQueue.TryDequeue(out string? message))
+                        else
                         {
-                            MessageInfo? messageInfo = JsonDeserializeMessage(message);
                             RecMessBox.Dispatcher.Invoke(() =>
                             {
-                                RecMessBox.AppendText($"{Environment.NewLine}{messageInfo.TimeSend.ToShortTimeString()}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
+                                RecMessBox.AppendText($"{Environment.NewLine}{messageInfo.TimeSentDT.ToString("HH:mm")}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
                             });
                         }
                     }
                 }
-
                 await Task.Delay(200);
             }
         }
 
-        private void ParseMessageToSender()
+        private void ParseMessageToSenderClass(string textToSend)
         {
-            string textToSend = SendMessBox.Text.Trim();
-
-            Paragraph paragraphSent = new Paragraph();
-
             if (textToSend.Length > 0)
             {
-                //paragraphSent.Background = Brushes.OrangeRed;
+                Paragraph paragraphSent = new Paragraph();
 
                 paragraphSent.TextAlignment = TextAlignment.Right;
                 //paragraphSent.BorderBrush = Brushes.Orange;
@@ -132,20 +122,27 @@ namespace commappcs
                 //RecMessBox.AppendText(string.Concat(Environment.NewLine,"Wysłano: ", textToSend));
 
                 messageSender.SendMessage(textToSend);
+            }
+        }
+        private void CheckAndParseMessages()
+        {
+            if (SendMessBox.Text.Length > 0 && SendMessBox.Text is not templateString)
+            {
+                ParseMessageToSenderClass(SendMessBox.Text.Trim());
                 SendMessBox.Clear();
             }
-            else
+
+            if (imagePath is not null)
             {
-                SendMessBox.Clear();
+                ParseMessageToSenderClass(ImageConverter.ImageToStringConverter(imagePath));
+                imagePath = null;
+                AddedImageName.Content = null;
             }
         }
 
         private void SendMessButton_Click(object sender, RoutedEventArgs e)
         {
-            if (SendMessBox.Text.Length > 0 && SendMessBox.Text is not templateString)
-            {
-                ParseMessageToSender();
-            }
+            CheckAndParseMessages();
 
             if (SendMessButton.IsKeyboardFocused)
             {
@@ -153,11 +150,13 @@ namespace commappcs
             }
         }
 
+
         private void SendMessBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                ParseMessageToSender();
+                //ParseMessageToSenderClass(SendMessBox.Text.Trim());
+                CheckAndParseMessages();
             }
 
         }
@@ -180,12 +179,46 @@ namespace commappcs
             }
         }
 
+        //  if message is send/received, scroll to the end of textbox
         private void RecMessBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+            // blocking scrolling if user is manually scrolling to read older messages
             if (!RecMessBox.IsMouseOver)
             {
                 RecMessBox.ScrollToEnd();
             }
+        }
+
+        private void AddImage_Click(object sender, RoutedEventArgs e)
+        {
+            // Configure open file dialog box
+            var dialog = new Microsoft.Win32.OpenFileDialog();
+
+            // Filter files by extension
+            dialog.Filter = "Image Files |*.jpg;*.jpeg;*.bmp;*.png";
+
+            // Setting dialog options
+            dialog.Multiselect = false;
+            dialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            dialog.Title = "Choose an image to send";
+
+            // Show open file dialog box
+            bool? result = dialog.ShowDialog();
+
+            // Process open file dialog box results
+            if (result == true)
+            {
+                // Get image path
+                imagePath = dialog.FileName;
+
+                AddedImageName.Content = string.Concat("Image loaded: ", imagePath);
+            }
+        }
+
+        private void DeleteImage_Click(object sender, RoutedEventArgs e)
+        {
+            imagePath = null;
+            AddedImageName.Content = null;
         }
     }
 }
