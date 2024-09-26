@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>828</width>
+    <height>602</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,7 +27,7 @@
      <string>Send</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit">
+   <widget class="InputTextEdit" name="textEdit">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -95,13 +95,20 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>828</width>
      <height>21</height>
     </rect>
    </property>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>InputTextEdit</class>
+   <extends>QTextEdit</extends>
+   <header>inputtextedit.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

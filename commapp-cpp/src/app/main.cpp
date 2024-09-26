@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 
         context::init(std::move(connection_details));
 
-        w.init();
+        w.init(login.toStdString());
         w.setEnabled(true);
     });
     login_d.set_when_rejected([&w](){ w.close();});

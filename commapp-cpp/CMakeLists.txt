@@ -57,6 +57,10 @@ set(SOURCE_FILES
     ${SOURCE_DIR}/service/context.cpp
     ${SOURCE_DIR}/amqp/dispatcher.h
     ${SOURCE_DIR}/amqp/dispatcher.cpp
+    ${SOURCE_DIR}/amqp/text_chat_message.h
+    ${SOURCE_DIR}/amqp/text_chat_message.cpp
+    ${SOURCE_DIR}/app/inputtextedit.h
+    ${SOURCE_DIR}/app/inputtextedit.cpp
     ${SOURCE_DIR}/app/mainwindow.h
     ${SOURCE_DIR}/app/mainwindow.cpp
     ${SOURCE_DIR}/app/mainwindow.ui
@@ -64,6 +68,7 @@ set(SOURCE_FILES
     ${SOURCE_DIR}/app/login/login_dialog.h
     ${SOURCE_DIR}/app/login/login_dialog.cpp
     ${SOURCE_DIR}/app/login/login_dialog.ui
+
 )
 
 qt_add_executable(CommApp-Cpp ${SOURCE_FILES} ${rapidjson_sources})

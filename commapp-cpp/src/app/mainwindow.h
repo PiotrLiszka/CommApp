@@ -17,7 +17,7 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
-    void init();
+    void init(const std::string& login);
 
 private slots:
     void on_pushButton_clicked();
@@ -25,6 +25,7 @@ private slots:
     void on_friendsListWidget_itemDoubleClicked(QListWidgetItem *item);
 
 private:
+    std::string _login;
     Ui::MainWindow* ui;
 };
 
