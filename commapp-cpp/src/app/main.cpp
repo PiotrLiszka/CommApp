@@ -35,7 +35,5 @@ int main(int argc, char** argv)
         w.setEnabled(true);
     });
     login_d.set_when_rejected([&w](){ w.close();});
-
-
     return app.exec();
 }

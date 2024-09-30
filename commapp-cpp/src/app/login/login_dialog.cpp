@@ -34,3 +34,9 @@ void login_dialog::on_loginDialogButtons_accepted()
     _when_accepted(ui->lineEdit_login->text());
 }
 
+
+void login_dialog::on_login_dialog_rejected()
+{
+    _when_rejected();
+}
+

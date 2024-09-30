@@ -4,18 +4,37 @@
 #include <service/context.h>
 #include <login/login_dialog.h>
 #include <amqp/text_chat_message.h>
+#include "list_widget_delegate.h"
+
+#include <chrono>
 
 #include <QListWidget>
+#include <QScrollBar>
+#include <QMessageBox>
 #include <QLabel>
 
 namespace {
+
 std::string utcTimeNow()
 {
-    std::time_t time = std::time({});
-    char timeString[std::size("yyyy-mm-ddThh:mm:ssZ")];
-    std::strftime(std::data(timeString), std::size(timeString),
-                  "%FT%TZ", std::gmtime(&time));
-    return timeString;
+    return std::format("{0:%F}T{0:%R}Z", std::chrono::utc_clock::now());
+}
+
+QString local_time()
+{
+    const auto utc_offset = std::chrono::current_zone()->get_info(std::chrono::system_clock::now()).offset;
+    return std::format("{0:%F} {0:%R}", std::chrono::utc_clock::now() + utc_offset).c_str();
+}
+
+QString utc_time_str_to_local_time_str(const std::string& utc_time_str)
+{
+    const auto utc_offset = std::chrono::current_zone()->get_info(std::chrono::system_clock::now()).offset;
+    tm tm = {};
+    std::istringstream ss(utc_time_str);
+    ss >> std::get_time(&tm, "%Y-%m-%dT%R");
+    std::chrono::system_clock::time_point time_point_from_str =
+      std::chrono::system_clock::from_time_t(timegm(&tm)) + utc_offset;
+    return std::format("{0:%F} {0:%R}", time_point_from_str).c_str();
 }
 }
 
@@ -24,6 +43,7 @@ MainWindow::MainWindow(QWidget* parent)
   ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    ui->tabWidget->setTabsClosable(true);
 }
 
 MainWindow::~MainWindow()
@@ -33,16 +53,13 @@ MainWindow::~MainWindow()
 
 void MainWindow::init(const std::string &login)
 {
-    _login = login;
+    ui->usernameLabel->setText(login.c_str());
 
     context::getInstance().dispatcher().consume([this](const std::string& message){
-        if (ui->tabWidget->currentWidget() == nullptr)
-        {
-            qWarning() << "Missed message! " + message;
-            return;
-        }
-        QListWidget* message_list_widget = static_cast<QListWidget*>(ui->tabWidget->currentWidget());
-        message_list_widget->addItem(QString{message.c_str()});
+        const text_chat_message incoming_message(message);
+        QListWidget* message_list_widget = get_or_create_tab_list_widget(incoming_message.sender_id().c_str());
+        add_message_to_widget(message_list_widget, incoming_message, Qt::AlignLeft);
+        message_list_widget->scrollToBottom();
     });
 
     ui->textEdit->setEnterCallback(std::bind(&MainWindow::on_pushButton_clicked, this));
@@ -59,28 +76,11 @@ void MainWindow::on_pushButton_clicked()
         return;
 
 
-    text_chat_message msg(_login, utcTimeNow(), to_be_send_text.toStdString());
+    text_chat_message msg(ui->usernameLabel->text().toStdString(), utcTimeNow(), to_be_send_text.toStdString());
     context::getInstance().dispatcher().publish(msg, recipent_name.toStdString());
 
-    QListWidget* message_list_widget = static_cast<QListWidget*>(ui->tabWidget->currentWidget());
-
-    // font
-    QFont qlist_widget_font = message_list_widget->font();
-    qlist_widget_font.setFamily("lucida grande");
-    qlist_widget_font.setPointSize(13);
-    message_list_widget->setFont(qlist_widget_font);
-
-    QListWidgetItem* this_user_message_item = new QListWidgetItem(to_be_send_text, message_list_widget);
-    QLinearGradient gradient(0, 0, 0, this_user_message_item->sizeHint().height());
-    gradient.setColorAt(1, QColor{198, 242, 255});
-    gradient.setColorAt(0, QColor{164, 204, 255});
-    QBrush brush(gradient);
-
-    this_user_message_item->setBackground(brush);
-    this_user_message_item->setTextAlignment(Qt::AlignRight);
-
-    message_list_widget->addItem(this_user_message_item);
-    message_list_widget->scrollToBottom();
+    QListWidget* current_list_widget = get_current_list_widget();
+    add_message_to_widget(current_list_widget, msg, Qt::AlignRight);
 
     ui->textEdit->setPlainText("");
 }
@@ -94,16 +94,68 @@ void MainWindow::on_addNewFriendPushButton_clicked()
     ui->newFriendLineEdit->clear();
 }
 
-
 void MainWindow::on_friendsListWidget_itemDoubleClicked(QListWidgetItem *item)
 {
     const QString clicked_friend_name = item->text();
     for (int i = 0; i < ui->tabWidget->count(); i++)
     {
         if (ui->tabWidget->tabText(i) == clicked_friend_name)
+        {
+            ui->tabWidget->setCurrentIndex(i);
             return;
+        }
     }
-    QListWidget* new_qlist_widget = new QListWidget();
-    ui->tabWidget->addTab(new_qlist_widget, item->text());
+
+    QListWidget* new_qlist_widget = create_new_list_widget(item->text());
+    ui->tabWidget->setCurrentWidget(new_qlist_widget);
 }
+
+QListWidget *MainWindow::get_current_list_widget() const
+{
+    QListWidget* message_list_widget = static_cast<QListWidget*>(ui->tabWidget->currentWidget());
+    assert(message_list_widget);
+    return message_list_widget;
+}
+QListWidget *MainWindow::create_new_list_widget(const QString& tab_name)
+{
+    QListWidget* new_qlist_widget = new QListWidget();
+    new_qlist_widget->setStyleSheet("""QListWidget{background: white;}""");
+    new_qlist_widget->setSpacing(1);
+    new_qlist_widget->setItemDelegate(new list_widget_delegate(new_qlist_widget));
+    new_qlist_widget->setFlow(QListView::TopToBottom);
+    const int new_tab_index = ui->tabWidget->addTab(new_qlist_widget, tab_name);
+    connect(ui->tabWidget->tabBar(), &QTabBar::tabCloseRequested, [this, new_tab_index](){ ui->tabWidget->removeTab(new_tab_index); });
+    return new_qlist_widget;
+}
+
+
+QListWidget *MainWindow::get_or_create_tab_list_widget(const QString &tab_name)
+{
+    for (int i = 0; i < ui->tabWidget->count(); i++)
+    {
+        if (ui->tabWidget->tabText(i) == tab_name)
+        {
+            return static_cast<QListWidget*>(ui->tabWidget->widget(i));
+        }
+    }
+
+    return create_new_list_widget(tab_name);
+}
+
+void MainWindow::add_message_to_widget(QListWidget *target_widget, const text_chat_message &message, const Qt::AlignmentFlag alignment)
+{
+    if (target_widget->count() == 0 || target_widget->item(target_widget->count() - 1)->textAlignment() != alignment)
+    {
+        QString time = alignment == Qt::AlignRight ? local_time() : utc_time_str_to_local_time_str(message.date_time());
+        QListWidgetItem* time_item = new QListWidgetItem(time, target_widget);
+        time_item->setTextAlignment(Qt::AlignCenter);
+        target_widget->addItem(time_item);
+    }
+
+    QListWidgetItem* this_user_message_item = new QListWidgetItem(message.get_chat_message().c_str(), target_widget);
+    this_user_message_item->setTextAlignment(alignment);
+    target_widget->addItem(this_user_message_item);
+    target_widget->scrollToBottom();
+}
+
 

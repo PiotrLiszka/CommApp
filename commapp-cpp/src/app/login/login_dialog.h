@@ -23,6 +23,8 @@ private slots:
     void on_loginDialogButtons_rejected();
     void on_loginDialogButtons_accepted();
 
+    void on_login_dialog_rejected();
+
 private:
     Ui::login_dialog* ui;
     std::function<void(const QString&)> _when_accepted;

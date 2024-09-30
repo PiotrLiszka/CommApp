@@ -30,6 +30,27 @@ text_chat_message::text_chat_message(const std::string &senderId, const std::str
     _document.AddMember("message", chat_message_value, _document.GetAllocator());
 }
 
+std::string text_chat_message::get_chat_message() const
+{
+    assert(_document.HasMember("message"));
+    assert(_document["message"].IsString());
+    return _document["message"].GetString();
+}
+
+std::string text_chat_message::date_time() const
+{
+    assert(_document.HasMember("datetime"));
+    assert(_document["datetime"].IsString());
+    return _document["datetime"].GetString();
+}
+
+std::string text_chat_message::sender_id() const
+{
+    assert(_document.HasMember("senderId"));
+    assert(_document["senderId"].IsString());
+    return _document["senderId"].GetString();
+}
+
 text_chat_message::operator std::string() const
 {
     rapidjson::StringBuffer buffer;
