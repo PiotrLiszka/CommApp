@@ -1,12 +1,12 @@
 ﻿using System.Text;
 using System.Diagnostics;
-using System.Text.Json;
 using RabbitMQ.Client;
+using CommunicationsLib.MsgParser;
 
-namespace CommunicationsLib;
+namespace CommunicationsLib.MsgServices;
 
 public class Sender
-{ 
+{
     private readonly ConnectionFactory factory;
     private readonly IConnection connection;
     private readonly IModel channel;
@@ -23,18 +23,18 @@ public class Sender
                      durable: false,
                      exclusive: false,
                      autoDelete: false,
-             arguments: null);
+                     arguments: null);
         }
         else
         {
             //  ip port username i password z pliku
-            using (StreamReader sr = new StreamReader(string.Concat(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                Path.DirectorySeparatorChar,
-                "adresip.txt")))
+            using (StreamReader sr = new StreamReader(string.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                                                    Path.DirectorySeparatorChar,
+                                                    "adresip.txt")))
             {
                 factory = new ConnectionFactory { HostName = sr.ReadLine() };
-                if(int.TryParse(sr.ReadLine(), out int port))
+
+                if (int.TryParse(sr.ReadLine(), out int port))
                     factory.Port = port;
 
                 factory.UserName = sr.ReadLine();
@@ -47,22 +47,15 @@ public class Sender
                      durable: false,
                      exclusive: false,
                      autoDelete: false,
-             arguments: null);
+                     arguments: null);
 
             }
         }
     }
 
-    private string JsonSerializeMessage(string messageToSerialize, int userID = 1)
-    {
-        MessageInfo messageInfo = new MessageInfo(userID, messageToSerialize);
-
-        return JsonSerializer.Serialize(messageInfo);
-    }
-
     public void SendMessage(string messageToSend)
     {
-        string jsonMessage = JsonSerializeMessage(messageToSend);
+        string jsonMessage = MessageJson.JsonSerializeMessage(messageToSend);
 
         var body = Encoding.UTF8.GetBytes(jsonMessage);
 
@@ -71,12 +64,19 @@ public class Sender
         properties.ContentEncoding = "application/json";
         properties.ContentType = "application/json";
 
+
         channel.BasicPublish(exchange: string.Empty,
                              routingKey: "hello",
                              basicProperties: properties,
                              body: body);
 
         Debug.WriteLine($"Message send.{Environment.NewLine}Mess: {messageToSend}");
+    }
+
+    ~Sender()
+    {
+        channel.Close();
+        connection.Close();
     }
 
 }

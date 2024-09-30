@@ -3,15 +3,18 @@ using System.Text;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace CommunicationsLib;
+using CommunicationsLib;
+
+namespace CommunicationsLib.MsgServices;
 
 public class Receiver
 {
-
-    public static Queue<string?> messageQueue = new();
     private readonly ConnectionFactory factory;
     private readonly IConnection connection;
     private readonly IModel channel;
+
+    public static Queue<string?> messageQueue = new();
+
     public Receiver(bool localHost = true)
     {
         if (localHost)
@@ -25,17 +28,16 @@ public class Receiver
                              exclusive: false,
                              autoDelete: false,
                              arguments: null);
-
         }
         else
         {
             //  ip port username i password z pliku 
-            using (StreamReader sr = new StreamReader(string.Concat(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                Path.DirectorySeparatorChar,
-                "adresip.txt")))
+            using (StreamReader sr = new StreamReader(string.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                                                    Path.DirectorySeparatorChar,
+                                                    "adresip.txt")))
             {
                 factory = new ConnectionFactory { HostName = sr.ReadLine() };
+
                 if (int.TryParse(sr.ReadLine(), out int port))
                     factory.Port = port;
                 factory.UserName = sr.ReadLine();
@@ -52,21 +54,21 @@ public class Receiver
         }
     }
 
-    public void GetMessages()
+    public void StartMessageConsumer()
     {
         var consumer = new EventingBasicConsumer(channel);
+
         consumer.Received += (model, ea) =>
         {
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
-            
+
             messageQueue.Enqueue(message);
         };
 
         channel.BasicConsume(queue: "hello",
                              autoAck: true,
                              consumer: consumer);
-
     }
 
     ~Receiver()
