@@ -5,8 +5,6 @@
 
 #include <amqp/dispatcher.h>
 
-#include "main.moc"
-
 namespace service
 {
 class qservice : public QObject

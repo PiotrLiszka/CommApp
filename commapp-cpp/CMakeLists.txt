@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
 
-project(CommApp-Cpp)
+project(CommApp-Cpp VERSION 0.0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -57,6 +57,10 @@ set(SOURCE_FILES
     ${SOURCE_DIR}/service/context.cpp
     ${SOURCE_DIR}/amqp/dispatcher.h
     ${SOURCE_DIR}/amqp/dispatcher.cpp
+    ${SOURCE_DIR}/amqp/text_chat_message.h
+    ${SOURCE_DIR}/amqp/text_chat_message.cpp
+    ${SOURCE_DIR}/app/inputtextedit.h
+    ${SOURCE_DIR}/app/inputtextedit.cpp
     ${SOURCE_DIR}/app/mainwindow.h
     ${SOURCE_DIR}/app/mainwindow.cpp
     ${SOURCE_DIR}/app/mainwindow.ui
@@ -64,6 +68,8 @@ set(SOURCE_FILES
     ${SOURCE_DIR}/app/login/login_dialog.h
     ${SOURCE_DIR}/app/login/login_dialog.cpp
     ${SOURCE_DIR}/app/login/login_dialog.ui
+    ${SOURCE_DIR}/app/list_widget_delegate.h
+    ${SOURCE_DIR}/app/list_widget_delegate.cpp
 )
 
 qt_add_executable(CommApp-Cpp ${SOURCE_FILES} ${rapidjson_sources})
