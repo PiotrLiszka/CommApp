@@ -28,7 +28,7 @@ namespace commappcs
         private Receiver messageReceiver;
         private FlowDocument messagesFlowDocument;
 
-        private readonly Dictionary<string, MessageTabContent> openFriendTabs; // --- nowe
+        private readonly Dictionary<string, MessageTabContent> openFriendTabs; // --- new
         private readonly MainWindowHandler MainWindowMethods;
 
         private string? imagePath = null;
