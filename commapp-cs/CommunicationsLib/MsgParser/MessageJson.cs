@@ -1,6 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Json.Schema;
+using ForWriter = Newtonsoft.Json;
 
 namespace CommunicationsLib.MsgParser;
 

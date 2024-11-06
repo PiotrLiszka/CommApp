@@ -5,19 +5,19 @@ namespace CommunicationsLib.MsgParser;
 public class MessageInfo
 {
     [JsonIgnore]
-    public DateTime TimeSentDT { get; set; }
+    public DateTime TimeSentDT { get; init; }
 
     [JsonRequired]
     [JsonPropertyName("senderId")]
-    public string SenderID { get; set; }
+    public string SenderID { get; init; }
 
     [JsonRequired]
     [JsonPropertyName("datetime")]
-    public string TimeSentStr { get; set; }
+    public string TimeSentStr { get; init; }
 
     [JsonRequired]
     [JsonPropertyName("message")]
-    public string? MessageBody { get; set; }
+    public string? MessageBody { get; init; }
 
     /// <summary>
     /// Constructor used for sending serialized message to end user
