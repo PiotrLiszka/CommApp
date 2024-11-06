@@ -19,11 +19,11 @@ public:
     void set_when_accepted(std::function<void(const QString&)> when_accepted);
     void set_when_rejected(std::function<void()> when_rejected);
 
-    QString getLogin() const;
-
 private slots:
     void on_loginDialogButtons_rejected();
     void on_loginDialogButtons_accepted();
+
+    void on_login_dialog_rejected();
 
 private:
     Ui::login_dialog* ui;
