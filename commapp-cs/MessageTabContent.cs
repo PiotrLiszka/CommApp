@@ -10,7 +10,7 @@ namespace commappcs
     {
         public TabItem Item {  get; init; }
         public Label NameLabel {  get; init; }
-        public RichTextBox messTextBox { get; init; }
+        public RichTextBox MessTextBox { get; init; }
         public Button TabCloseButton { get; init; }
 
         private readonly Grid tabGrid;
@@ -31,19 +31,22 @@ namespace commappcs
                 Width = new GridLength(1, GridUnitType.Star)
             });
 
-            messTextBox = new RichTextBox
+            MessTextBox = new RichTextBox
             {
                 Background = Brushes.LightGray,
                 IsReadOnly = true,
-                Document = new FlowDocument()
+                Document = new FlowDocument(),
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Margin = new Thickness(1),
+                IsUndoEnabled = false
             };
 
             Item = new TabItem()
             {
                 Name = friend,
-                Content = messTextBox,
+                Content = MessTextBox,
                 Header = tabGrid,
-                Width = 100
+                MinWidth = 100
             };
 
             NameLabel = new Label()
@@ -64,14 +67,11 @@ namespace commappcs
                 Background = Brushes.Transparent
             };
 
-
             NameLabel.SetValue(Grid.ColumnProperty, 0);
             TabCloseButton.SetValue(Grid.ColumnProperty, 1);
 
             tabGrid.Children.Add(NameLabel);
             tabGrid.Children.Add(TabCloseButton);
-
         }
-
     }
 }

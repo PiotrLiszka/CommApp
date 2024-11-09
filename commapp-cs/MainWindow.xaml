@@ -23,10 +23,13 @@
         <Label x:Name="MainLabel" Content="Marsengerr"
                HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Center" FontSize="50" Grid.ColumnSpan="2"/>
 
-        <RichTextBox x:Name="RecMessBox" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="1" Margin="10,10,10,10"
-                    Background="LightGray" IsReadOnly="True" IsUndoEnabled="False" VerticalScrollBarVisibility="Auto" FontSize="18" TextChanged="RecMessBox_TextChanged" />
-        
-        <TabControl x:Name="MessageTabs" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="1" Margin="10,10,10,10">
+        <Label x:Name="BackgroundTextBox" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center"
+               Background="Transparent" FontSize="36" Content="Double click a friend to start messaging." HorizontalContentAlignment="Center"
+               Margin="10,10,10,10" BorderThickness="2,2,2,2" BorderBrush="LightSkyBlue"/>
+
+        <TabControl x:Name="MessageTabs" LayoutUpdated="MessageTabs_LayoutUpdated"
+                    Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="1" Margin="10,10,10,10" 
+                    Visibility="Hidden">
 
         </TabControl>
 
@@ -70,7 +73,9 @@
         
         <TextBox x:Name="SendMessBox" Grid.Row="3" Grid.Column="0" Margin="10,5,5,5"
                  TextBlock.FontSize="16" TextWrapping="Wrap"
-                 GotKeyboardFocus="SendMessBox_GotKeyboardFocus" KeyDown="SendMessBox_KeyDown" LostKeyboardFocus="SendMessBox_LostKeyboardFocus" MinHeight="50" MaxHeight="100" Height="auto" />
+                 GotKeyboardFocus="SendMessBox_GotKeyboardFocus" KeyDown="SendMessBox_KeyDown" LostKeyboardFocus="SendMessBox_LostKeyboardFocus"
+                 MinHeight="50" MaxHeight="100" Height="auto" />
+        
         <Button x:Name="SendMessButton" Content="Send" Margin="5,5,10,5" Grid.Column="1" Grid.Row="3" ToolTip="Send message" Click="SendMessButton_Click" ClickMode="Press"
                 MinHeight="50" VerticalAlignment="Bottom" />
 

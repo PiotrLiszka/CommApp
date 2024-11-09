@@ -1,20 +1,7 @@
-﻿using System.Text;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-
-using System.Diagnostics;
-using CommunicationsLib.MsgServices;
-using CommunicationsLib.MsgParser;
-using System.Windows.Controls.Primitives;
-using System.Collections.Generic;
-using System.Reflection;
 
 
 namespace commappcs
@@ -24,19 +11,10 @@ namespace commappcs
     /// </summary>
     public partial class MainWindow : Window
     {
-        //private Sender messageSender;
-        private Receiver messageReceiver;
-        private FlowDocument messagesFlowDocument;
-
-        private readonly Dictionary<string, MessageTabContent> openFriendTabs; // --- new
-        private readonly MainWindowHandler MainWindowMethods;
+        private readonly MainWindowHandler mainWindowHandler;
 
         private string? imagePath = null;
-
-        private const string templateString = "Type message...";
-
-        public Queue<string> messageQueue;
-
+        private const string templateString = MainWindowHandler.templateString;
 
         public MainWindow()
         {
@@ -44,13 +22,14 @@ namespace commappcs
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             string currentUser = string.Empty;
-
+            
             /// mainwindow visual and other options
             /// 
-
-            messagesFlowDocument = new FlowDocument();
-            RecMessBox.Document = messagesFlowDocument;
             SendMessBox.Foreground = Brushes.Gray;
+
+            SendMessBox.IsEnabled = false;
+            AddImageButton.IsEnabled = false;
+            SendMessButton.IsEnabled = false;
 
             /// show loginwindow with main window in background and not active
             ///
@@ -75,230 +54,15 @@ namespace commappcs
                     break;
             }
 
-            MainWindowMethods = new MainWindowHandler(ref SendMessBox, ref AddedImageName, ref MessageTabs, currentUser);
-            SendMessBox.Text = MainWindowMethods.GetTemplateString;
+            mainWindowHandler = new MainWindowHandler(ref SendMessBox, ref AddedImageName, ref MessageTabs, currentUser);
+            SendMessBox.Text = templateString;
 
             FriendsList.SelectionMode = SelectionMode.Single;
-
-            messageQueue = Receiver.messageQueue;
-
-            /// helper dictionary to get into the RichTextBox objects of opened UI message tabs
-            ///
-            openFriendTabs = new Dictionary<string, MessageTabContent>();
-
-            /// starting messaging services
-            ///
-            messageReceiver = new(currentUser, true);
-            //messageSender = new(true);
-            messageReceiver.StartMessageConsumer((model, ea) =>
-            {
-                var body = ea.Body.ToArray();
-                var messageType = ea.BasicProperties.ContentType;
-                var message = Encoding.UTF8.GetString(body);
-
-                var routingKey = ea.RoutingKey;
-
-                Debug.WriteLine($"{message}");
-
-                //messageQueue.Enqueue(message);
-                //messageQueue.Enqueue(messageType);    // delete it
-
-                void WriteMessagePlz()
-                {
-                    MessageInfo? messageInfo = MessageJson.JsonDeserializeMessage(message);
-
-                    if (messageInfo == null)
-                        return;
-
-                    //Debug.WriteLine($"W invoke: {routingKey}");
-
-                    Border bdrBubble = new Border();
-                    {
-                        bdrBubble.BorderThickness = new Thickness(2);
-                        bdrBubble.BorderBrush = Brushes.Black;
-                        bdrBubble.CornerRadius = new CornerRadius(20);
-                        bdrBubble.Padding = new Thickness(10);
-                        bdrBubble.Background = new LinearGradientBrush(Color.FromRgb(48, 138, 199), Color.FromRgb(62, 177, 255), new Point(0, 1), new Point(0, 0));
-                    }
-
-                    TextBlock txtBubble = new TextBlock();
-                    {
-                        txtBubble.TextWrapping = TextWrapping.Wrap;
-                        txtBubble.Background = Brushes.Transparent;
-                        txtBubble.Foreground = Brushes.White;
-                        txtBubble.ClipToBounds = true;
-                        txtBubble.TextAlignment = TextAlignment.Left;
-                        txtBubble.MaxWidth = RecMessBox.ViewportWidth / 3 * 2;
-                    }
-
-                    bdrBubble.Child = txtBubble;
-                    txtBubble.Text = string.Concat(messageInfo.TimeSentDT.ToString("HH:mm"), " ID: ", messageInfo.SenderID, " -> ", messageInfo.MessageBody);
-
-                    Paragraph receivedParagraph = new Paragraph();
-                    receivedParagraph.TextAlignment = TextAlignment.Left;
-                    receivedParagraph.Inlines.Add(bdrBubble);
-
-                    TabItem currentTab = (TabItem)MessageTabs.Items.GetItemAt(MessageTabs.SelectedIndex);
-
-                    //int incomingMessTabId = MessageTabs.Items.IndexOf(openFriendTabs[routingKey].Item);
-                    //if (incomingMessTabId == -1)
-                    //{
-                    //    // jeśli przyjdzie wiadomość od nieznajomego then .......
-
-                    //    throw new NotImplementedException();
-                    //}
-                    //else
-                    //{
-                        
-                    //}
-
-                    //Debug.WriteLine($"ID OF TAB: {MessageTabs.Items.IndexOf(openFriendTabs[routingKey].Item)}");
-
-                    RichTextBox currentTabTextBox = (RichTextBox)currentTab.Content;
-                    currentTabTextBox.Document.Blocks.Add(receivedParagraph);
-                }
-                //
-                //
-                //     DO KONTYNUACJI!!
-                //
-                //
-
-                MessageTabs.Dispatcher.InvokeAsync(WriteMessagePlz);
-            });
-
-            //UpdateMessagesInWindow();
         }
-
-        private async void UpdateMessagesInWindow() /// !!! TODO: fix this method !!!
-        {
-            while (true)
-            {
-
-                if (messageQueue.Count > 0)
-                {
-                    Paragraph paragraphReceived = new Paragraph();
-
-                    paragraphReceived.TextAlignment = TextAlignment.Left;
-
-                    if (messageQueue.TryDequeue(out string? message))
-                    {
-                        if (messageQueue.TryDequeue(out string? messageType))
-                        {
-                            if (message == null)
-                                continue;
-
-                            MessageInfo? messageInfo = MessageJson.JsonDeserializeMessage(message);
-
-                            // if message did not pass the json schema validation, it will not be shown at all for now
-                            // TODO: write some error message about it
-                            if (messageInfo == null)
-                                continue;
-
-                            bool uiAccess = RecMessBox.Dispatcher.CheckAccess();
-
-                            if (uiAccess)
-                            {
-                                if (messageType == "text/plain")
-                                {
-                                    Border bdrBubble = new Border();
-                                    {
-                                        bdrBubble.BorderThickness = new Thickness(2);
-                                        bdrBubble.BorderBrush = Brushes.Black;
-                                        bdrBubble.CornerRadius = new CornerRadius(20);
-                                        bdrBubble.Padding = new Thickness(10);
-                                        bdrBubble.Background = new LinearGradientBrush(Color.FromRgb(48, 138, 199), Color.FromRgb(62, 177, 255), new Point(0, 1), new Point(0, 0));
-                                    }
-
-                                    TextBox txtBubble = new TextBox();
-                                    {
-                                        txtBubble.TextWrapping = TextWrapping.Wrap;
-                                        txtBubble.Background = Brushes.Transparent;
-                                        txtBubble.Foreground = Brushes.White;
-                                        txtBubble.BorderThickness = new Thickness(0);
-                                        txtBubble.ClipToBounds = true;
-                                        txtBubble.TextAlignment = TextAlignment.Left;
-                                        txtBubble.MaxWidth = RecMessBox.ViewportWidth / 3 * 2;
-                                    }
-
-                                    bdrBubble.Child = txtBubble;
-                                    txtBubble.Text = string.Concat(messageInfo.TimeSentDT.ToString("HH:mm"), " ID: ", messageInfo.SenderID, " -> ", messageInfo.MessageBody);
-
-                                    paragraphReceived.Inlines.Add(bdrBubble);
-                                    messagesFlowDocument.Blocks.Add(paragraphReceived);
-
-                                    //paragraphReceived.Inlines.Add(string.Concat(messageInfo.TimeSentDT.ToString("HH:mm"), " ID: ", messageInfo.SenderID, " -> ", messageInfo.MessageBody));
-                                    //messagesFlowDocument.Blocks.Add(paragraphReceived);
-                                }
-                                else
-                                {
-                                    if (messageInfo.MessageBody == null || messageType == null)
-                                        continue;
-
-                                    ImageConverter.StringToImageConverter(messageInfo.MessageBody, messageType);
-                                    paragraphReceived.Inlines.Add(string.Concat(messageInfo.TimeSentDT.ToString("HH:mm"), " ID: ", messageInfo.SenderID, " ->  Image: ", messageType));
-                                    messagesFlowDocument.Blocks.Add(paragraphReceived);
-                                }
-                            }
-                            else
-                            {
-                                //RecMessBox.Dispatcher.Invoke(() =>
-                                //{
-                                //    RecMessBox.AppendText($"{Environment.NewLine}{messageInfo.TimeSentDT.ToString("HH:mm")}  ID: {messageInfo.SenderID} -> {messageInfo.MessageBody} ");
-                                //});
-                            }
-                        }
-                    }
-                }
-                await Task.Delay(200);
-            }
-        }
-
-        //public void ParseMessageToSenderClass(string textToSend, string messageType)
-        //{
-        //    if (textToSend.Length > 0)
-        //    {
-        //        Paragraph paragraphSent = new Paragraph();
-        //            paragraphSent.TextAlignment = TextAlignment.Right;
-
-        //        if (messageType == "text")
-        //            paragraphSent.Inlines.Add(string.Concat("Wysłano: ", textToSend));
-        //        else
-        //            // test to see if images are read correctly -> messageType = file extension
-        //            paragraphSent.Inlines.Add(string.Concat("Wysłano: ", messageType));
-
-        //        messagesFlowDocument.Blocks.Add(paragraphSent);
-        //        //RecMessBox.AppendText(string.Concat(Environment.NewLine,"Wysłano: ", textToSend));
-
-        //        messageSender.SendMessage(textToSend, messageType);
-        //    }
-        //}
-
-        //private void CheckAndParseMessages()
-        //{
-        //    string txtToSend;
-        //    string messageType;
-
-        //    if (SendMessBox.Text.Length > 0 && SendMessBox.Text is not templateString)
-        //    {
-        //        txtToSend = SendMessBox.Text.Trim();
-        //        messageType = "text";
-        //        ParseMessageToSenderClass(ref txtToSend, ref messageType);
-        //        SendMessBox.Clear();
-        //    }
-
-        //    if (imagePath is not null)
-        //    {
-        //        txtToSend = ImageConverter.ImageToStringConverter(ref imagePath);
-        //        messageType = System.IO.Path.GetExtension(imagePath);
-        //        ParseMessageToSenderClass(ref txtToSend, ref messageType);
-        //        imagePath = null;
-        //        AddedImageName.Content = null;
-        //    }
-        //}
 
         private void SendMessButton_Click(object sender, RoutedEventArgs e)
         {
-            MainWindowMethods.CheckAndParseMessages(ref imagePath);
+            mainWindowHandler.CheckAndParseMessages(ref imagePath);
 
             if (SendMessButton.IsKeyboardFocused)
             {
@@ -306,26 +70,11 @@ namespace commappcs
             }
         }
 
-
         private void SendMessBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                /// --- new
-                /// finding open tab and adding paragraph with sent message to it
-                /// TODO : move it to another method, probably ParseMessageToSenderClass
-                ///
-
-                //TabItem currentTab = (TabItem)MessageTabs.Items.GetItemAt(MessageTabs.SelectedIndex);
-
-                //RichTextBox currentTabTextBox = (RichTextBox)currentTab.Content;
-
-                //Paragraph paragraph = new Paragraph();
-                //paragraph.TextAlignment = TextAlignment.Right;
-                //paragraph.Inlines.Add(SendMessBox.Text);
-                //currentTabTextBox.Document.Blocks.Add(paragraph);
-
-                MainWindowMethods.CheckAndParseMessages(ref imagePath);
+                mainWindowHandler.CheckAndParseMessages(ref imagePath);
             }
         }
 
@@ -345,18 +94,7 @@ namespace commappcs
             if (SendMessBox.Text.Trim().Length == 0)
             {
                 SendMessBox.Foreground = Brushes.Gray;
-                //SendMessBox.Text = templateString;
-                SendMessBox.Text = MainWindowMethods.GetTemplateString;
-            }
-        }
-
-        //  if message is send/received, scroll to the end of textbox
-        private void RecMessBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            // blocking scrolling if user is manually scrolling to read older messages
-            if (!RecMessBox.IsMouseOver)
-            {
-                RecMessBox.ScrollToEnd();
+                SendMessBox.Text = templateString;
             }
         }
 
@@ -404,9 +142,9 @@ namespace commappcs
 
         private void AddFriendButton_Click(object sender, RoutedEventArgs e)
         {
-            var addFriendWindow = new AddFriendWindow();
-
+            AddFriendWindow addFriendWindow = new();
             addFriendWindow.Owner = this;
+
             switch (addFriendWindow.ShowDialog())
             {
                 case true:
@@ -422,47 +160,48 @@ namespace commappcs
         //
         private void FriendsList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
+            if (!FriendsList.HasItems)
+                return;
 
-            if (FriendsList.HasItems)
+            if (FriendsList.SelectedItem == null)
+                return;
+
+            string friend = (string)FriendsList.SelectedItem;
+
+            //  if tab is already open, then switches to that tab
+            //
+            if (mainWindowHandler.openFriendTabs.TryGetValue(friend, out MessageTabContent? value))
             {
-                if (FriendsList.SelectedItem != null)
-                {
-                    string friend = (string)FriendsList.SelectedItem;
-
-                    //  if tab is already open, then switches to that tab
-                    //
-                    if (openFriendTabs.TryGetValue(friend, out MessageTabContent? value))
-                    {
-                        MessageTabs.SelectedIndex = MessageTabs.Items.IndexOf(value.Item);
-                    }
-                    //  if tab is not open, then creates new instance of tab content and adds it to TabControl item list (MessageTab)
-                    //
-                    else
-                    {
-                        MessageTabContent mtc = new(friend);
-
-                        MessageTabs.Items.Add(mtc.Item);
-                        MessageTabs.SelectedIndex = MessageTabs.Items.IndexOf(mtc.Item);
-
-                        openFriendTabs.Add(friend, mtc);
-
-                        // Click event for this tabs button (closing tab)
-                        //
-                        mtc.TabCloseButton.Click += CloseMessageTab;
-                    }
-                }
-                FriendsList.UnselectAll();
+                MessageTabs.SelectedIndex = MessageTabs.Items.IndexOf(value.Item);
             }
+            //  if tab is not open, then creates new instance of tab content and adds it to TabControl item list (MessageTab)
+            //
+            else
+            {
+                MessageTabs.SelectedIndex = mainWindowHandler.OpenNewMessageTab(friend);
+            }
+
+            FriendsList.UnselectAll();
         }
 
-        //  click event to close the message tab via button
+        //  checks after opening/closing message tabs if TabControl should be visible and if message controls should be enabled
         //
-        private void CloseMessageTab(object sender, RoutedEventArgs e)
+        private void MessageTabs_LayoutUpdated(object sender, EventArgs e)
         {
-            Button button = (Button)sender;
-
-            MessageTabs.Items.Remove(openFriendTabs[button.Name].Item);
-            openFriendTabs.Remove(button.Name);
+            if (MessageTabs.Items.Count > 0)
+            {
+                MessageTabs.Visibility = Visibility.Visible;
+                SendMessBox.IsEnabled = true;
+                AddImageButton.IsEnabled = true;
+                SendMessButton.IsEnabled = true;
+            }
+            else
+            {
+                MessageTabs.Visibility = Visibility.Collapsed;
+                SendMessBox.IsEnabled = false;
+                AddImageButton.IsEnabled = false;
+                SendMessButton.IsEnabled = false;
+            }
         }
     }
 }

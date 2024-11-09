@@ -29,6 +29,25 @@ namespace commappcs
             //  test login name
             //
             LoginNameBox.Text = "Kenny";
+
+            LoginNameBox.KeyDown += LoginNameBox_EnterPressed;
+            PasswordBox.KeyDown += PasswordBox_EnterPressed;
+        }
+
+        private void PasswordBox_EnterPressed(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                OkButton_Click(sender, e);
+            }
+        }
+
+        private void LoginNameBox_EnterPressed(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                OkButton_Click(sender, e);
+            }
         }
 
         public string GetLoginName()
@@ -38,7 +57,7 @@ namespace commappcs
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
-            if(this.LoginNameBox.Text.Trim().Length > 0)
+            if(GetLoginName().Length > 0)
             {
                 this.DialogResult = true;
                 this.Close();

@@ -1,14 +1,13 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Json.Schema;
-using ForWriter = Newtonsoft.Json;
 
 namespace CommunicationsLib.MsgParser;
 
-public static class MessageJson
+public static class MessageJsonSerializer
 {
-    private static EvaluationResults EvaluateJsonMessage(string jsonMessage)
+    private static bool EvaluateJsonMessage(string jsonMessage)
     {
         // Path : "./MsgParser/message.schema.json"
         string schemaPath = string.Concat(
@@ -17,7 +16,15 @@ public static class MessageJson
             Path.DirectorySeparatorChar, "message.schema.json");
         JsonSchema schema = JsonSchema.FromFile(schemaPath);
 
-        return schema.Evaluate(JsonNode.Parse(jsonMessage)); 
+        try
+        {
+            return schema.Evaluate(JsonNode.Parse(jsonMessage)).IsValid;    // System.Text.Json.JsonReaderException
+        }
+        catch (JsonException ex)
+        {
+            Debug.WriteLine(ex);
+            return false;
+        }
     }
 
     public static string JsonSerializeMessage(string messageToSerialize, string myUserID = "1")
@@ -29,6 +36,6 @@ public static class MessageJson
 
     public static MessageInfo? JsonDeserializeMessage(string jsonMessage)
     {
-        return EvaluateJsonMessage(jsonMessage).IsValid ? System.Text.Json.JsonSerializer.Deserialize<MessageInfo>(jsonMessage) : null;
+        return EvaluateJsonMessage(jsonMessage) ? JsonSerializer.Deserialize<MessageInfo>(jsonMessage) : null;
     }
 }

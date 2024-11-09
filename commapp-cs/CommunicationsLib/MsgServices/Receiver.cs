@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text;
-using RabbitMQ.Client;
+﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 
@@ -9,49 +7,26 @@ namespace CommunicationsLib.MsgServices;
 public class Receiver
 {
     private readonly ConnectionFactory factory;
-    private readonly IConnection connection;
-    private readonly IModel channel;
-    private readonly string userName;
+    private readonly string myUsername;
 
-    public static Queue<string> messageQueue = new();
+    private IConnection? connection;
+    private IModel? channel;
 
-    public Receiver(string userName, bool localHost = true)
+    public Receiver(string myUserame, bool localHost = true)
     {
-        this.userName = userName;
+        this.myUsername = myUserame;
 
         if (localHost)
         {
             factory = new ConnectionFactory { HostName = "localhost" };
-            connection = factory.CreateConnection();
-            channel = connection.CreateModel();
 
-            channel.ExchangeDeclare(
-                exchange: "commapp-cs",
-                type: ExchangeType.Direct);
-
-            channel.QueueDeclare(queue: $"commapp-{userName}",
-                             durable: false,
-                             exclusive: false,
-                             autoDelete: false,
-                             arguments: null);
-
-            channel.QueueBind(
-                    queue: $"commapp-{userName}",
-                    exchange: "commapp-cs",
-                    routingKey: userName);
-
-            //channel.QueueDeclare(queue: "hello",
-            //                 durable: false,
-            //                 exclusive: false,
-            //                 autoDelete: false,
-            //                 arguments: null);
+            InitializeConnection(myUserame);
         }
         else
         {
             //  ip port username and password from file
-            using (StreamReader sr = new StreamReader(string.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                                                    Path.DirectorySeparatorChar,
-                                                    "adresip.txt")))
+            string connectionFilePath = string.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), Path.DirectorySeparatorChar, "adresip.txt");
+            using (StreamReader sr = new StreamReader(connectionFilePath))
             {
                 factory = new ConnectionFactory { HostName = sr.ReadLine() };
 
@@ -60,61 +35,49 @@ public class Receiver
 
                 factory.UserName = sr.ReadLine();
                 factory.Password = sr.ReadLine();
-                connection = factory.CreateConnection();
-                channel = connection.CreateModel();
-
-                channel.ExchangeDeclare(
-                    exchange: "commapp-cs",
-                    type: ExchangeType.Direct);
-
-                channel.QueueDeclare(queue: $"commapp-{userName}",
-                             durable: true,
-                             exclusive: false,
-                             autoDelete: false,
-                             arguments: null);
-
-
-                //channel.QueueDeclare(queue: "hello",
-                //             durable: false,
-                //             exclusive: false,
-                //             autoDelete: false,
-                //             arguments: null);
+                
+                InitializeConnection(myUserame);
             }
         }
     }
 
-    public void StartMessageConsumer(EventHandler<BasicDeliverEventArgs> callback)
+    private void InitializeConnection(string userName)
+    {
+        //  TODO: check if connection was established, if not - retry
+        //  return bool maybe?
+        connection = factory.CreateConnection();
+        channel = connection.CreateModel();
+
+        channel.ExchangeDeclare(
+            exchange: "commapp-cs",
+            type: ExchangeType.Direct,
+            durable: true);
+
+        channel.QueueDeclare(queue: $"commapp-{userName}",
+                         durable: true,
+                         exclusive: false,
+                         autoDelete: false,
+                         arguments: null);
+
+        channel.QueueBind(
+                queue: $"commapp-{userName}",
+                exchange: "commapp-cs",
+                routingKey: userName);
+    }
+
+    public void StartMessageConsumer(EventHandler<BasicDeliverEventArgs> callbackHandler)
     {
         var consumer = new EventingBasicConsumer(channel);
-        consumer.Received += callback;
+        consumer.Received += callbackHandler;
 
-        //consumer.Received += (model, ea) =>
-        //{
-        //    var body = ea.Body.ToArray();
-        //    var messageType = ea.BasicProperties.ContentType;
-        //    var message = Encoding.UTF8.GetString(body);
-
-        //    var routingKey = ea.RoutingKey;
-
-        //    Debug.WriteLine($"{message}");
-
-        //    messageQueue.Enqueue(message);
-        //    messageQueue.Enqueue(messageType);
-
-        //};
-
-        //channel.BasicConsume(queue: "hello",
-        //                     autoAck: true,
-        //                     consumer: consumer);
-
-        channel.BasicConsume(queue: $"commapp-{userName}",
+        channel.BasicConsume(queue: $"commapp-{myUsername}",
             autoAck: true,
             consumer: consumer);
     }
 
     ~Receiver()
     {
-        channel.Close();
-        connection.Close();
+        connection?.Close();
+        channel?.Close();
     }
 }

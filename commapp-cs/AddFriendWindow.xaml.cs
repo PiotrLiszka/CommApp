@@ -24,6 +24,16 @@ namespace commappcs
             InitializeComponent();
 
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            FriendTextBox.KeyDown += FriendTextBox_EnterPressed;
+            FriendTextBox.Focus();
+        }
+
+        private void FriendTextBox_EnterPressed(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                OkButton_Click(sender, e);
+            }
         }
 
         public string GetFriendUsername()

@@ -10,7 +10,8 @@ public static class ImageConverter
         {"image/jpeg", ".jpg" }, {"image/bmp", ".bmp"}, {"image/png", ".png"}
     };
 
-    public static string ImageToStringConverter(ref string imgPth)
+    //  TODO: send image in smaller chunks to avoid LOH
+    public static string ImageToStringConverter(ref string imgPth) 
     {
         // Read the image file into a byte array
         byte[] imageBytes = File.ReadAllBytes(imgPth);

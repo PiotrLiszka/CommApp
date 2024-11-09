@@ -8,33 +8,23 @@ namespace CommunicationsLib.MsgServices;
 public class Sender
 {
     private readonly ConnectionFactory factory;
-    private readonly IConnection connection;
-    private readonly IModel channel;
+
+    private IConnection? connection;
+    private IModel? channel;
 
     public Sender(bool localHost = true)
     {
         if (localHost)
         {
             factory = new ConnectionFactory { HostName = "localhost" };
-            connection = factory.CreateConnection();
-            channel = connection.CreateModel();
 
-            channel.ExchangeDeclare(
-                    exchange: "comapp-cs",
-                    type: ExchangeType.Direct);
-
-            //channel.QueueDeclare(queue: "hello",
-            //         durable: false,
-            //         exclusive: false,
-            //         autoDelete: false,
-            //         arguments: null);
+            InitializeConnection();
         }
         else
         {
+            string connectionFilePath = string.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), Path.DirectorySeparatorChar, "adresip.txt");
             //  ip port username and password from file (security reasons)
-            using (StreamReader sr = new StreamReader(string.Concat(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                                                    Path.DirectorySeparatorChar,
-                                                    "adresip.txt")))
+            using (StreamReader sr = new StreamReader(connectionFilePath))
             {
                 factory = new ConnectionFactory { HostName = sr.ReadLine() };
 
@@ -43,27 +33,33 @@ public class Sender
 
                 factory.UserName = sr.ReadLine();
                 factory.Password = sr.ReadLine();
-
-                connection = factory.CreateConnection();
-                channel = connection.CreateModel();
-
-                channel.ExchangeDeclare(
-                    exchange: "commapp-cs",
-                    type: ExchangeType.Direct);
-
-                //channel.QueueDeclare(queue: "hello",
-                //     durable: false,
-                //     exclusive: false,
-                //     autoDelete: false,
-                //     arguments: null);
-
             }
+                InitializeConnection();
         }
+    }
+
+    private void InitializeConnection()
+    {
+        //  TODO: check if connection was established, if not - retry
+        //  return bool maybe?
+        connection = factory.CreateConnection();
+        channel = connection.CreateModel();
+
+        channel.ExchangeDeclare(
+                exchange: "commapp-cs",
+                type: ExchangeType.Direct,
+                durable: true);
     }
 
     public void SendMessage(string messageToSend, string messageMIMEType, string sendTo, string messFrom)
     {
-        string jsonMessage = MessageJson.JsonSerializeMessage(messageToSend, messFrom);
+        // TODO: connection check
+        if (channel == null)
+            return;
+
+        string jsonMessage = MessageJsonSerializer.JsonSerializeMessage(messageToSend, messFrom);
+
+        Debug.WriteLine(jsonMessage);
 
         var body = Encoding.UTF8.GetBytes(jsonMessage);
 
@@ -88,24 +84,18 @@ public class Sender
                 break;
         }
 
-        //channel.BasicPublish(exchange: string.Empty,
-        //                     routingKey: "hello",
-        //                     basicProperties: properties,
-        //                     body: body);
-
         channel.BasicPublish(exchange: "commapp-cs",
                              routingKey: sendTo,
                              basicProperties: properties,
                              body: body);
-
     }
 
     ~Sender()
     {
-        channel.Dispose();
-        channel.Close();
-        connection.Dispose();
-        connection.Close();
+        channel?.Dispose();
+        channel?.Close();
+        connection?.Dispose();
+        connection?.Close();
     }
 
 }
